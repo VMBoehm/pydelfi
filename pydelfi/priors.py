@@ -15,7 +15,7 @@ class TruncatedGaussian():
         
     def loguniform(self, x):
 
-        inrange = np.prod(x > self.lower)*np.prod(x < self.upper)
+        inrange = np.prod(x > self.lower, axis=-1)*np.prod(x < self.upper,axis=-1)
         return inrange*np.log(np.prod(self.upper-self.lower)) - (1 - inrange)*1e300
     
     def uniform(self, x):
@@ -37,7 +37,7 @@ class TruncatedGaussian():
 
     def logpdf(self, x):
         
-        return self.loguniform(x) - 0.5*self.logdet - 0.5*np.dot((x - self.mean), np.dot(self.Cinv,(x - self.mean)) )
+        return self.loguniform(x) - 0.5*self.logdet - 0.5*np.einsum('...i,...i',(x - self.mean), np.einsum('ij,...j',self.Cinv,(x - self.mean)) )
 
 
 class Uniform():
