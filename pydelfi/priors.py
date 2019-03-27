@@ -37,8 +37,11 @@ class TruncatedGaussian():
 
     def logpdf(self, x):
         
-        return self.loguniform(x) - 0.5*self.logdet - 0.5*np.einsum('...i,...i',(x - self.mean), np.einsum('ij,...j',self.Cinv,(x - self.mean)) )
+        return self.loguniform(x) - 0.5*self.logdet - 0.5*np.dot((x - self.mean), np.dot(self.Cinv,(x - self.mean)))
 
+    def chi2(self,x):
+        
+        return -0.5*np.dot((x-self.mean),np.dot(self.Cinv,(x-self.mean)))
 
 class Uniform():
 
