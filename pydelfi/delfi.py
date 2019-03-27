@@ -660,7 +660,7 @@ class Delfi():
             alphas =[0.3,0.7]
         if fid_c == None:
             fid_c = 'orange'
-        if prior_cc == None
+        if prior_cc == None:
         pp = priors
         # Triangle plot
         with mpl.rc_context():
