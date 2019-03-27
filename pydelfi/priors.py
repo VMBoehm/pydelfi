@@ -41,7 +41,7 @@ class TruncatedGaussian():
 
     def chi2(self,x):
         
-        return -0.5*np.einsum('...i,...i',(x - self.mean), np.einsum('ij,...j',self.Cinv,(x - self.mean)):wq)
+        return -0.5*np.einsum('...i,...i',(x - self.mean), np.einsum('ij,...j',self.Cinv,(x - self.mean)))
 
 class Uniform():
 
