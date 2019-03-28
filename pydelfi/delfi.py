@@ -650,8 +650,8 @@ class Delfi():
             else:
                 plt.close()
                 
-    def adv_triangle_plot(self, prior, val_fid, samples = None, savefig = False, filename = None, fid_c=None, prior_cc=None, alphas=[None,None], plot_priors=False):
-         
+    def adv_triangle_plot(self, prior, val_true, val_fid=None, samples = None, savefig = False, filename = None, fid_c=None, prior_cc=None, alphas=[None,None], plot_priors=False):
+         , plot_fid=False)
         # Set samples to the posterior samples by default
         if samples is None:
             samples = [self.posterior_samples]
@@ -661,6 +661,8 @@ class Delfi():
             alphas =[0.3,0.7]
         if fid_c == None:
             fid_c = 'orange'
+        if tru_c == None:
+            tru_c = 'crimson'
         if prior_cc == None:
             prior_cc = 'gold'
         pp = prior
@@ -700,15 +702,19 @@ class Delfi():
                           if isinstance(pp,priors.Uniform):
                               ax.axvspan(pp.lower[j],pp.upper[j], color=prior_cc, alpha=alphas[0],zorder=-1)
                               ax.axhspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[0],zorder=-1)
-                        ax.scatter(val_fid[j],val_fid[i],color=fid_c,zorder=1,s=40)
+                        if plot_fid:
+                          ax.scatter(val_fid[j],val_fid[i],color=fid_c,zorder=1,s=60)
+                        ax.scatter(val_true[j],val_true[i],color=tru_c,zorder=1,s=25)
                 else:
                     if plot_priors:
                       if isinstance(pp,priors.TruncatedGaussian):
-                          ax.axvspan((pp.mean[i] - pp.C[i,i]), (pp.mean[i] + pp.C[i,i]), color=prior_cc, alpha=alphas[0],zorder=-1)
-                          ax.axvspan((pp.mean[i] - 2*pp.C[i,i]), (pp.mean[i] + 2*pp.C[i,i]), color=prior_cc, alpha=alphas[1],zorder=-1)
+                        ax.axvspan((pp.mean[i] - pp.C[i,i]), (pp.mean[i] + pp.C[i,i]), color=prior_cc, alpha=alphas[0],zorder=-1)
+                        ax.axvspan((pp.mean[i] - 2*pp.C[i,i]), (pp.mean[i] + 2*pp.C[i,i]), color=prior_cc, alpha=alphas[1],zorder=-1)
                       if isinstance(pp,priors.Uniform):   
-                          ax.axvspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[1],zorder=-1)
-                    ax.axvline(val_fid[i],color=fid_c,lw=1)
+                        ax.axvspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[1],zorder=-1)
+                    if plot_fid:
+                      ax.axvline(val_fid[i],color=fid_c,lw=3)
+                    ax.axvline(val_true[i],color=tru_c,lw=1)
                 xtl = ax.get_xticklabels()
                 ax.set_xticklabels(xtl, rotation=45)
             plt.tight_layout()
