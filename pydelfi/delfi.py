@@ -650,7 +650,7 @@ class Delfi():
             else:
                 plt.close()
                 
-    def adv_triangle_plot(self, prior, val_true, val_fid=None, samples = None, savefig = False, filename = None, fid_c=None, prior_cc=None, alphas=[None,None], plot_priors=False,plot_fid=False):
+    def adv_triangle_plot(self, prior, val_true, val_fid=None, samples = None, savefig = False, filename = None, tru_c=None, fid_c=None, prior_cc=None, alphas=[None,None], plot_priors=False,plot_fid=False):
         # Set samples to the posterior samples by default
         if samples is None:
             samples = [self.posterior_samples]
