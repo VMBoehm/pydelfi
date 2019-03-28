@@ -10,6 +10,7 @@ import pydelfi.priors as priors
 import numpy as np
 from tqdm.auto import tqdm
 import scipy.optimize as optimization
+from scipy.stats import multivariate_normal
 import pickle
 
 class Delfi():
@@ -119,10 +120,10 @@ class Delfi():
         # MCMC samples of learned posterior
         if self.asymptotic_posterior is not None:
             self.posterior_samples = np.array([self.asymptotic_posterior.draw() for i in range(self.nwalkers*self.posterior_chain_length)])
-            self.proposal_samples = np.array([self.asymptotic_posterior.draw() for i in range(self.nwalkers*self.proposal_chain_length)])
+            self.proposal_samples  = np.array([self.asymptotic_posterior.draw() for i in range(self.nwalkers*self.proposal_chain_length)])
         else:
             self.posterior_samples = np.array([self.prior.draw() for i in range(self.nwalkers*self.posterior_chain_length)])
-            self.proposal_samples = np.array([self.prior.draw() for i in range(self.nwalkers*self.proposal_chain_length)])
+            self.proposal_samples  = np.array([self.prior.draw() for i in range(self.nwalkers*self.proposal_chain_length)])
     
         # Parameter names and ranges for plotting with GetDist
         self.names = param_names
@@ -649,8 +650,8 @@ class Delfi():
             else:
                 plt.close()
                 
-    def adv_triangle_plot(self, prior, val_fid, samples = None, savefig = False, filename = None, fid_c=None, prior_cc=None, alphas=[None,None]):
-
+    def adv_triangle_plot(self, prior, val_fid, samples = None, savefig = False, filename = None, fid_c=None, prior_cc=None, alphas=[None,None], plot_prior=False):
+         
         # Set samples to the posterior samples by default
         if samples is None:
             samples = [self.posterior_samples]
@@ -662,7 +663,7 @@ class Delfi():
             fid_c = 'orange'
         if prior_cc == None:
             prior_cc = 'gold'
-        pp = priors
+        pp = prior
         # Triangle plot
         with mpl.rc_context():
             g = plots.getSubplotPlotter(width_inch = 12)
@@ -675,34 +676,38 @@ class Delfi():
             for i in range(0, len(samples[0][0,:])):
                 for j in range(0, i+1):
                     ax = g.subplots[i,j]
+                    
                     if i is not j:
-                        if isinstance(pp,priors.TruncatedGaussian):
-                            x = np.linspace(pp.lower[i],pp.upper[i],100)
-                            y = np.linspace(pp.lower[j],pp.upper[j],100)
-                            X, Y = np.meshgrid(x,y)
-                            pos = np.empty(X.shape + (2,))
-                            pos[:, :, 0] = X; pos[:, :, 1] = Y
-                            var = multivariate_normal(mean=[pp.mean[i],pp.mean[j]], cov=[[pp.C[i,i],pp.C[i,j]],[pp.C[j,i],pp.C[j,j]]])
-                            Z   = var.pdf(pos)
-                            norm = multivariate_normal.pdf([0.,0.],mean=[0.,0.], cov=[[pp.C[i,i],pp.C[i,j]],[pp.C[j,i],pp.C[j,j]]])
-                            Z = -2*np.log(Z/norm)   # returns the chi squared
+                        if plot_priors:
+                          if isinstance(pp,priors.TruncatedGaussian):
 
-                            # # confidence level contours
-                            conf_level = np.array([0.68, 0.95])
-                            chi2 = -2. * np.log(1. - conf_level)
+                              x = np.linspace(pp.lower[i],pp.upper[i],100)
+                              y = np.linspace(pp.lower[j],pp.upper[j],100)
+                              X, Y = np.meshgrid(x,y)
+                              pos = np.empty(X.shape + (2,))
+                              pos[:, :, 0] = X; pos[:, :, 1] = Y
+                              var = multivariate_normal(mean=[pp.mean[i],pp.mean[j]], cov=[[pp.C[i,i],pp.C[i,j]],[pp.C[j,i],pp.C[j,j]]])
+                              Z   = var.pdf(pos)
+                              norm = multivariate_normal.pdf([0.,0.],mean=[0.,0.], cov=[[pp.C[i,i],pp.C[i,j]],[pp.C[j,i],pp.C[j,j]]])
+                              Z = -2*np.log(Z/norm)   # returns the chi squared
 
-                            ax.contourf(X,Y,Z, [0., chi2[0]], colors=prior_cc, alpha=alphas[1],zorder=-1)
-                            ax.contourf(X,Y,Z, [0., chi2[1]], colors=prior_cc, alpha=alphas[0],zorder=-1)
-                        if isinstance(pp,priors.Uniform):
-                            ax.axvspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[0],zorder=-1)
-                            ax.axhspan(pp.lower[j],pp.upper[j], color=prior_cc, alpha=alphas[0],zorder=-1)
-                        ax.scatter(val_fid[i],val_fid[j],color=fid_c)
+                              # # confidence level contours
+                              conf_level = np.array([0.68, 0.95])
+                              chi2 = -2. * np.log(1. - conf_level)
+
+                              ax.contourf(X,Y,Z, [0., chi2[0]], colors=prior_cc, alpha=alphas[1],zorder=-1)
+                              ax.contourf(X,Y,Z, [0., chi2[1]], colors=prior_cc, alpha=alphas[0],zorder=-1)
+                          if isinstance(pp,priors.Uniform):
+                              ax.axvspan(pp.lower[j],pp.upper[j], color=prior_cc, alpha=alphas[0],zorder=-1)
+                              ax.axhspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[0],zorder=-1)
+                        ax.scatter(val_fid[j],val_fid[i],color=fid_c,zorder=1,s=40)
                 else:
-                    if isinstance(pp,priors.TruncatedGaussian):
-                        ax.axvspan((pp.mean[i] - pp.C[i,i]), (pp.mean[i] + pp.C[i,i]), color=prior_cc, alpha=alphas[0],zorder=-1)
-                        ax.axvspan((pp.mean[i] - 2*pp.C[i,i]), (pp.mean[i] + 2*pp.C[i,i]), color=prior_cc, alpha=alphas[1],zorder=-1)
-                    if isinstance(pp,priors.Uniform):   
-                        ax.axvspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[1],zorder=-1)
+                    if plot_priors:
+                      if isinstance(pp,priors.TruncatedGaussian):
+                          ax.axvspan((pp.mean[i] - pp.C[i,i]), (pp.mean[i] + pp.C[i,i]), color=prior_cc, alpha=alphas[0],zorder=-1)
+                          ax.axvspan((pp.mean[i] - 2*pp.C[i,i]), (pp.mean[i] + 2*pp.C[i,i]), color=prior_cc, alpha=alphas[1],zorder=-1)
+                      if isinstance(pp,priors.Uniform):   
+                          ax.axvspan(pp.lower[i],pp.upper[i], color=prior_cc, alpha=alphas[1],zorder=-1)
                     ax.axvline(val_fid[i],color=fid_c,lw=1)
                 xtl = ax.get_xticklabels()
                 ax.set_xticklabels(xtl, rotation=45)
