@@ -19,7 +19,7 @@ class Delfi():
                  posterior_chain_length = 1000, proposal_chain_length = 100, \
                  rank = 0, n_procs = 1, comm = None, red_op = None, \
                  show_plot = True, results_dir = "", progress_bar = True, input_normalization = None,
-                 graph_restore_filename = "graph_checkpoint", restore_filename = "restore.pkl", restore = False, save = True):
+                 graph_restore_filename = "graph_checkpoint", restore_filename = "restore.pkl", restore = False, save = True, optimizer_arguments={}):
         
         # Input validation
         for i in range(len(nde)):
@@ -60,7 +60,7 @@ class Delfi():
         # Initialize the NDEs, trainers, and stacking weights (for stacked density estimators)
         self.n_ndes = len(nde)
         self.nde = nde
-        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i]) for i in range(self.n_ndes)]
+        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i],optimizer_arguments) for i in range(self.n_ndes)]
         self.stacking_weights = np.zeros(self.n_ndes)
 
         # Tensorflow session for the NDE training
