@@ -333,7 +333,7 @@ class MixtureDensityNetwork:
 
         
         self.mu = tf.identity(self.mu, name = "mu")
-        self.Sigma = tf.identity(self.Sigma, name = "Sigma")
+        self.Sigma = tf.identity(sigma_mat, name = "Sigma")
         self.alpha = tf.identity(self.alpha, name = "alpha")
         #self.det = tf.identity(self.det, name = "det")
         
