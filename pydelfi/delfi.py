@@ -60,7 +60,7 @@ class Delfi():
         # Initialize the NDEs, trainers, and stacking weights (for stacked density estimators)
         self.n_ndes = len(nde)
         self.nde = nde
-        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i],optimizer_arguments) for i in range(self.n_ndes)]
+        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i],optimizer_arguments=optimizer_arguments) for i in range(self.n_ndes)]
         self.stacking_weights = np.zeros(self.n_ndes)
 
         # Tensorflow session for the NDE training
