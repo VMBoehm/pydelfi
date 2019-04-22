@@ -271,7 +271,7 @@ class MixtureDensityNetwork:
     """
 
     def __init__(self, n_parameters, n_data, n_components = 3, n_hidden=[50,50], activations=[tf.tanh, tf.tanh],
-                 input_parameters=None, input_data=None, logpdf=None, index=1):
+                 input_parameters=None, input_data=None, logpdf=None, index=1, offset=0.):
         """
         Constructor.
         :param n_parameters: number of (conditional) inputs
@@ -289,6 +289,7 @@ class MixtureDensityNetwork:
         self.N = int((self.n_data + self.n_data * (self.n_data + 1) / 2 + 1)*self.M)
         self.n_hidden = n_hidden
         self.activations = activations
+        self.Offset = offset
         
         self.parameters = tf.placeholder(dtype=dtype,shape=[None,self.n_parameters],name='parameters') if input_parameters is None else input_parameters
         self.data = tf.placeholder(dtype=dtype,shape=[None,self.n_data],name='data') if input_data is None else input_data
@@ -320,7 +321,7 @@ class MixtureDensityNetwork:
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
         self.alpha = tf.nn.softmax(self.alpha)
         self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
-        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma)))
+        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.Offset)
         self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
 
         self.mu = tf.identity(self.mu, name = "mu")
