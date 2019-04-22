@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.random as rng
 import tensorflow as tf
+import tensorflow_probability.distributions as tfd
+
 dtype = tf.float32
 
 class ConditionalGaussianMade:
@@ -320,17 +322,23 @@ class MixtureDensityNetwork:
         self.mu = tf.reshape(self.mu, (-1, self.M, self.n_data))
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
         self.alpha = tf.nn.softmax(self.alpha)
-        self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
-        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.Offset)
-        self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
+#        self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
+#        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.Offset)
+#        self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
 
+        # using tensorflow tfd to get Gaussian mixtures
+        sigma_mat = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
+        gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=sigma_mat))
+
+        
         self.mu = tf.identity(self.mu, name = "mu")
         self.Sigma = tf.identity(self.Sigma, name = "Sigma")
         self.alpha = tf.identity(self.alpha, name = "alpha")
-        self.det = tf.identity(self.det, name = "det")
+        #self.det = tf.identity(self.det, name = "det")
         
         # Log likelihoods
-        self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
+        self.L = gmm.log_prob(self.data)
+ #       self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
 
         # Objective loss function
         self.trn_loss = -tf.reduce_mean(self.L, name = "trn_loss")
