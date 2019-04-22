@@ -326,9 +326,10 @@ class MixtureDensityNetwork:
 #        self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
 #        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.Offset)
 #        self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
-
+        
         # using tensorflow tfd to get Gaussian mixtures
         sigma_mat = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
+
         gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=sigma_mat))
 
         
@@ -338,12 +339,12 @@ class MixtureDensityNetwork:
         #self.det = tf.identity(self.det, name = "det")
         
         # Log likelihoods
-        self.L = gmm.log_prob(tf.expand_dims(self.data, 1))
+        self.L = gmm.log_prob(self.data)
  #       self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
 
         # Objective loss function
         self.trn_loss = -tf.reduce_mean(self.L, name = "trn_loss")
-        self.reg_loss = tf.losses.mean_squared_error(self.L, self.logpdf)
+        self.reg_loss = tf.losses.mean_squared_error(tf.expand_dims(self.L, 1), self.logpdf)
 
     def eval(self, xy, sess, log=True):
         """
