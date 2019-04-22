@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.random as rng
 import tensorflow as tf
-import tensorflow_probability.distributions as tfd
+import tensorflow_probability as tfp
+tfd = tfp.distributions
 
 dtype = tf.float32
 
