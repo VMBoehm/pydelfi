@@ -322,7 +322,6 @@ class MixtureDensityNetwork:
         self.mu, self.sigma, self.alpha = tf.split(self.layers[-1], [self.M * self.n_data, self.M * self.n_data * (self.n_data + 1) // 2, self.M], 1)
         self.mu = tf.reshape(self.mu, (-1, self.M, self.n_data))
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
-        self.alpha = tf.nn.softmax(self.alpha)
 #        self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
 #        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.Offset)
 #        self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
@@ -339,7 +338,7 @@ class MixtureDensityNetwork:
         #self.det = tf.identity(self.det, name = "det")
         
         # Log likelihoods
-        self.L = gmm.log_prob(self.data)+ 1e-37
+        self.L = gmm.log_prob(self.data)
  #       self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
 
         # Objective loss function
