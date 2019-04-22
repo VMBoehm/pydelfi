@@ -338,7 +338,7 @@ class MixtureDensityNetwork:
         #self.det = tf.identity(self.det, name = "det")
         
         # Log likelihoods
-        self.L = gmm.log_prob(self.data)
+        self.L = gmm.log_prob(tf.expand_dims(self.data, 1))
  #       self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
 
         # Objective loss function
