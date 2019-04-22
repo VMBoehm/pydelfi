@@ -298,7 +298,7 @@ class Delfi():
             self.add_simulations(xs_batch, ps_batch)
             
             # Re-train the networks
-            self.train_ndes(training_data=[self.x_train, self.y_train], batch_size=max(self.n_sims//8, batch_size), validation_split=validation_split, epochs=epochs, patience=patience)
+            self.train_ndes(training_data=[self.x_train, self.y_train], batch_size=batch_size, validation_split=validation_split, epochs=epochs, patience=patience)
 
             # Save the losses
             self.stacked_sequential_training_loss.append(np.sum(np.array([self.training_loss[n][-1]*self.stacking_weights[n] for n in range(self.n_ndes)])))
@@ -480,7 +480,7 @@ class Delfi():
                 self.add_simulations(xs_batch, ps_batch)
         
                 # Train the network on these initial simulations
-                self.train_ndes(training_data=[self.x_train, self.y_train], batch_size=max(self.n_sims//8, batch_size), validation_split=0.1, epochs=epochs, patience=patience)
+                self.train_ndes(training_data=[self.x_train, self.y_train], batch_size=batch_size, validation_split=0.1, epochs=epochs, patience=patience)
                 self.stacked_sequential_training_loss.append(np.sum(np.array([self.training_loss[n][-1]*self.stacking_weights[n] for n in range(self.n_ndes)])))
                 self.stacked_sequential_validation_loss.append(np.sum(np.array([self.validation_loss[n][-1]*self.stacking_weights[n] for n in range(self.n_ndes)])))
                 self.sequential_nsims.append(self.n_sims)
