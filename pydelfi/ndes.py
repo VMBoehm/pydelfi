@@ -323,7 +323,7 @@ class MixtureDensityNetwork:
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
         
         # fill lower triangular matix and ensure positivity of diagonal -> valid cholesky
-        self.Sigma  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
+        self.Sigma  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.math.exp)
         # get Gaussian mixtures from tensorflow
         gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=self.Sigma))
 
