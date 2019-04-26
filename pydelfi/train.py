@@ -15,8 +15,9 @@ class ConditionalTrainer():
             """
         
         self.model = model
-        self.train_optimizer = optimizer(**optimizer_arguments).minimize(self.model.trn_loss)
-        self.train_reg_optimizer = optimizer(**optimizer_arguments).minimize(self.model.reg_loss)
+        self.opt = optimizer(**optimizer_arguments)
+        self.train_optimizer = self.opt.minimize(self.model.trn_loss)
+        self.train_reg_optimizer = self.opt.minimize(self.model.reg_loss)
 
     """
     Training class for the conditional MADEs/MAFs classes using a tensorflow optimizer.
