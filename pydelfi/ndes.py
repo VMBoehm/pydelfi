@@ -323,13 +323,13 @@ class MixtureDensityNetwork:
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
         
         # fill lower triangular matix and ensure positivity of diagonal -> valid cholesky
-        sigma_mat  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
+        self.Sigma  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
         # get Gaussian mixtures from tensorflow
-        gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=sigma_mat))
+        gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=self.Sigma))
 
         
         self.mu = tf.identity(self.mu, name = "mu")
-        self.Sigma = tf.identity(sigma_mat, name = "Sigma")
+        self.Sigma = tf.identity(self.Sigma, name = "Sigma")
         self.alpha = tf.identity(self.alpha, name = "alpha")
         
         # Log likelihoods
