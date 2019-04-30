@@ -1,9 +1,6 @@
 import numpy as np
 import numpy.random as rng
 import tensorflow as tf
-import tensorflow_probability as tfp
-tfd = tfp.distributions
-
 dtype = tf.float32
 
 class ConditionalGaussianMade:
@@ -274,7 +271,7 @@ class MixtureDensityNetwork:
     """
 
     def __init__(self, n_parameters, n_data, n_components = 3, n_hidden=[50,50], activations=[tf.tanh, tf.tanh],
-                 input_parameters=None, input_data=None, logpdf=None, index=1):
+                 input_parameters=None, input_data=None, logpdf=None, index=1, offset=1e-6):
         """
         Constructor.
         :param n_parameters: number of (conditional) inputs
@@ -292,6 +289,8 @@ class MixtureDensityNetwork:
         self.N = int((self.n_data + self.n_data * (self.n_data + 1) / 2 + 1)*self.M)
         self.n_hidden = n_hidden
         self.activations = activations
+
+        self.offset = offset
         
         self.parameters = tf.placeholder(dtype=dtype,shape=[None,self.n_parameters],name='parameters') if input_parameters is None else input_parameters
         self.data = tf.placeholder(dtype=dtype,shape=[None,self.n_data],name='data') if input_data is None else input_data
@@ -319,25 +318,24 @@ class MixtureDensityNetwork:
 
         # Map the output layer to mixture model parameters
         self.mu, self.sigma, self.alpha = tf.split(self.layers[-1], [self.M * self.n_data, self.M * self.n_data * (self.n_data + 1) // 2, self.M], 1)
-        self.mu    = tf.reshape(self.mu, (-1, self.M, self.n_data))
+        self.mu = tf.reshape(self.mu, (-1, self.M, self.n_data))
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
-        
-        # fill lower triangular matix and ensure positivity of diagonal -> valid cholesky
-        self.Sigma  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.math.exp)
-        # get Gaussian mixtures from tensorflow
-        gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=self.Sigma))
+        self.alpha = tf.nn.softmax(self.alpha)
+        self.Sigma = tf.contrib.distributions.fill_triangular(self.sigma)
+        self.Sigma = self.Sigma - tf.linalg.diag(tf.linalg.diag_part(self.Sigma)) + tf.linalg.diag(tf.exp(tf.linalg.diag_part(self.Sigma))+self.offset)
+        self.det = tf.reduce_prod(tf.linalg.diag_part(self.Sigma), axis=-1)
 
-        
         self.mu = tf.identity(self.mu, name = "mu")
         self.Sigma = tf.identity(self.Sigma, name = "Sigma")
         self.alpha = tf.identity(self.alpha, name = "alpha")
+        self.det = tf.identity(self.det, name = "det")
         
         # Log likelihoods
-        self.L = gmm.log_prob(self.data)
+        self.L = tf.log(tf.reduce_sum(tf.exp(-0.5*tf.reduce_sum(tf.square(tf.einsum("ijlk,ijk->ijl", self.Sigma, tf.subtract(tf.expand_dims(self.data, 1), self.mu))), 2) + tf.log(self.alpha) + tf.log(self.det) - self.n_data*np.log(2. * np.pi) / 2.), 1, keepdims=True) + 1e-37, name = "L")
 
         # Objective loss function
         self.trn_loss = -tf.reduce_mean(self.L, name = "trn_loss")
-        self.reg_loss = tf.losses.mean_squared_error(tf.expand_dims(self.L, 1), self.logpdf)
+        self.reg_loss = tf.losses.mean_squared_error(self.L, self.logpdf)
 
     def eval(self, xy, sess, log=True):
         """
