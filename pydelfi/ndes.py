@@ -221,8 +221,8 @@ class ConditionalMaskedAutoregressiveFlow:
         self.mode = mode
 
         self.parameters = tf.placeholder(dtype=dtype,shape=[None,n_parameters],name='parameters') if input_parameters is None else input_parameters
-        self.data = tf.placeholder(dtype=dtype,shape=[None,n_data],name='data') if input_data is None else input_data
-        self.logpdf = tf.placeholder(dtype=dtype,shape=[None,1],name='logpdf') if logpdf is None else logpdf
+        self.data       = tf.placeholder(dtype=dtype,shape=[None,n_data],name='data') if input_data is None else input_data
+        self.logpdf     = tf.placeholder(dtype=dtype,shape=[None,1],name='logpdf') if logpdf is None else logpdf
         
         self.parms = []
 
