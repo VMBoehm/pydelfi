@@ -321,19 +321,22 @@ class MixtureDensityNetwork:
         self.mu, self.sigma, self.alpha = tf.split(self.layers[-1], [self.M * self.n_data, self.M * self.n_data * (self.n_data + 1) // 2, self.M], 1)
         self.mu    = tf.reshape(self.mu, (-1, self.M, self.n_data))
         self.sigma = tf.reshape(self.sigma, (-1, self.M, self.n_data * (self.n_data + 1) // 2))
-        
+        self.alpha = tf.maximum(tf.nn.softplus(self.alpha), 1e-37)
+        self.alpha = self.alpha/tf.reduce_sum(self.alpha, 1)
+
+
         # fill lower triangular matix and ensure positivity of diagonal -> valid cholesky
         sigma_mat  = tfd.matrix_diag_transform(tfd.fill_triangular(self.sigma), transform=tf.nn.softplus)
+        sigma_mat  = tfd.matrix_diag_transform(sigma_mat, transform=lambda x: x+1e-38)
         # get Gaussian mixtures from tensorflow
         gmm = tfd.MixtureSameFamily(mixture_distribution=tfd.Categorical(logits=self.alpha),components_distribution=tfd.MultivariateNormalTriL(loc=self.mu,scale_tril=sigma_mat))
 
-        
-        self.mu = tf.identity(self.mu, name = "mu")
+        self.mu    = tf.identity(self.mu, name = "mu")
         self.Sigma = tf.identity(sigma_mat, name = "Sigma")
         self.alpha = tf.identity(self.alpha, name = "alpha")
-        
+        print('test')
         # Log likelihoods
-        self.L = gmm.log_prob(self.data)
+        self.L     = tf.log(gmm.prob(self.data+1e-37))
 
         # Objective loss function
         self.trn_loss = -tf.reduce_mean(self.L, name = "trn_loss")
