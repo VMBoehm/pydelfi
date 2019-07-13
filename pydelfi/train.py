@@ -6,23 +6,38 @@ from tqdm.auto import tqdm
 
 class ConditionalTrainer():
     
-    def __init__(self, model, optimizer=tf.train.AdamOptimizer, optimizer_arguments={}):
+    def __init__(self, model, optimizer,optimizer_arguments={}):
         """
             Constructor that defines the training operation.
             :param model: made/maf instance to be trained.
             :param optimizer: tensorflow optimizer class to be used during training.
             :param optimizer_arguments: dictionary of arguments for optimizer intialization.
             """
-        
-        self.model = model
-        self.opt = optimizer(**optimizer_arguments)
-        self.train_optimizer = self.opt.minimize(self.model.trn_loss)
+        try:
+            optimizer_arguments['decay_rate']
+        except:
+            optimizer_arguments['decay_rate']=1.
+
+        try:
+            optimizer_arguments['decay_inc']
+        except:
+            optimizer_arguments['decay_inc']=100000
+
+        self.global_step           = tf.Variable(0, trainable=False,name='global_step')
+        starter_learning_rate      = optimizer_arguments['learning_rate']
+        learning_rate              = tf.train.exponential_decay(starter_learning_rate,self.global_step,optimizer_arguments['decay_inc'],optimizer_arguments['decay_rate'], staircase=True)
+
+                
+        self.model           = model
+        self.opt             = optimizer(learning_rate)
+        self.train_optimizer     = self.opt.minimize(self.model.trn_loss,self.global_step)
         self.train_reg_optimizer = self.opt.minimize(self.model.reg_loss)
+        tf.summary.scalar('learning_rate', learning_rate)
 
     """
     Training class for the conditional MADEs/MAFs classes using a tensorflow optimizer.
     """           
-    def train(self, sess, train_data, validation_split = 0.1, epochs=1000, batch_size=100,
+    def train(self, sess, train_data, merged, train_writer, validation_split = 0.1, epochs=1000, batch_size=100,
               patience=20, saver_name='tmp_model', progress_bar=True, mode='samples'):
         """
         Training function to be called with desired parameters within a tensorflow session.
@@ -77,8 +92,8 @@ class ConditionalTrainer():
                 batch_idx = train_idx[batch*batch_size:np.min([(batch+1)*batch_size,len(train_idx)])]
 
                 if mode == 'samples':
-                    sess.run(self.train_optimizer,feed_dict={self.model.parameters:train_data_X[batch_idx],
-                                                      self.model.data:train_data_Y[batch_idx]})
+                    sess.run(self.train_optimizer,feed_dict={self.model.parameters:train_data_X[batch_idx],self.model.data:train_data_Y[batch_idx]})
+                    #train_writer.add_summary(summary, self.global_step)
                 elif mode == 'regression':
                     sess.run(self.train_reg_optimizer,feed_dict={self.model.parameters:train_data_X[batch_idx],
                              self.model.data:train_data_Y[batch_idx],

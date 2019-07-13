@@ -11,6 +11,7 @@ import numpy as np
 from tqdm.auto import tqdm
 import scipy.optimize as optimization
 import pickle
+import os
 
 class Delfi():
 
@@ -18,9 +19,10 @@ class Delfi():
                  Finv = None, theta_fiducial = None, param_limits = None, param_names = None, nwalkers = 100, \
                  posterior_chain_length = 1000, proposal_chain_length = 100, \
                  rank = 0, n_procs = 1, comm = None, red_op = None, \
-                 show_plot = True, results_dir = "", progress_bar = True, input_normalization = None,
-                 graph_restore_filename = "graph_checkpoint", restore_filename = "restore.pkl", restore = False, save = True):
-        
+                 show_plot = True, results_dir = "",summary_dir="./summaries/", progress_bar = True, input_normalization = None,
+                 graph_restore_filename = "graph_checkpoint", restore_filename = "restore.pkl", restore = True, save = True, opt_args={}):
+       
+
         # Input validation
         for i in range(len(nde)):
 
@@ -47,6 +49,19 @@ class Delfi():
                           '; NDE {:d} expects length {:d}.'
                 raise ValueError(err_msg.format(i, nde[i].n_data))
 
+        # moved session definition up
+        self.sess = tf.Session(config = tf.ConfigProto())
+
+        # Tensorboard stuff
+        self.merged = tf.summary.merge_all()
+        eventdir   = os.path.join(summary_dir + '/train')
+
+        if not os.path.exists(eventdir):
+            os.makedirs(eventdir)
+
+        self.train_writer = tf.summary.FileWriter(os.path.join(eventdir), self.sess.graph)
+
+
         # Data
         self.data = data
         self.D = len(data)
@@ -60,12 +75,24 @@ class Delfi():
         # Initialize the NDEs, trainers, and stacking weights (for stacked density estimators)
         self.n_ndes = len(nde)
         self.nde = nde
-        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i]) for i in range(self.n_ndes)]
+        self.trainer = [pydelfi.train.ConditionalTrainer(nde[i],tf.train.AdamOptimizer, optimizer_arguments=opt_args) for i in range(self.n_ndes)]
         self.stacking_weights = np.zeros(self.n_ndes)
 
+
+        # Tensorboard stuff
+        self.merged = tf.summary.merge_all()
+        eventdir   = os.path.join(summary_dir + '/train')
+
+        if not os.path.exists(eventdir):
+            os.makedirs(eventdir)
+
+        self.train_writer = tf.summary.FileWriter(os.path.join(eventdir), self.sess.graph)
+
+
         # Tensorflow session for the NDE training
-        self.sess = tf.Session(config = tf.ConfigProto())
         self.sess.run(tf.global_variables_initializer())
+
+
         
         # Parameter limits
         if param_limits is not None:
@@ -520,7 +547,7 @@ class Delfi():
         # Train the networks
         for n in range(self.n_ndes):
             # Train the NDE
-            val_loss, train_loss = self.trainer[n].train(self.sess, training_data, validation_split = validation_split, epochs=epochs, batch_size=batch_size, progress_bar=self.progress_bar, patience=patience, saver_name=self.graph_restore_filename, mode=mode)
+            val_loss, train_loss = self.trainer[n].train(self.sess, training_data, self.merged, self.train_writer, validation_split = validation_split, epochs=epochs, batch_size=batch_size, progress_bar=self.progress_bar, patience=patience, saver_name=self.graph_restore_filename, mode=mode)
         
             # Save the training and validation losses
             self.training_loss[n] = np.concatenate([self.training_loss[n], train_loss])
@@ -533,6 +560,7 @@ class Delfi():
         # if save == True, save everything
         if self.save == True:
             self.saver()
+       
 
     def load_simulations(self, xs_batch, ps_batch):
         
